@@ -2,14 +2,16 @@ package satoshiturk
 
 import (
 	"fmt"
-	"html/template"
+	"github.com/ethereum/go-ethereum/eth"
+	"github.com/ethereum/go-ethereum/eth/ethconfig"
+	"github.com/ethereum/go-ethereum/node"
 	"net/http"
-	"path/filepath"
 )
 
 func startServer() {
 	http.HandleFunc("/", handler)
-	http.HandleFunc("api/tx", apiHandler) // API yolu için rota
+	http.HandleFunc("/api/tx", apiHandler)
+	http.HandleFunc("/api/block", apiHandler)
 
 	http.ListenAndServe(":1983", nil)
 }
@@ -19,27 +21,21 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-
 	//disable cors
-	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:1983")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-	w.Header().Set("Access-Control-Allow-Headers", "*")
+	/*	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:1983")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		w.Header().Set("Access-Control-Allow-Headers", "*")*/
+	/*fmt.Println("method:", r.Method+" "+r.URL.Path)*/
 
-	fmt.Println("method:", r.Method+" "+r.URL.Path)
-
-	t, err := template.ParseFiles(filepath.Join("satoshiturk/public", "index.html"))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	t.Execute(w, nil)
 }
 
 func apiHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		switch r.URL.Path {
-		case "api/tx":
-			txSorgula(w, r)
+		case "/api/tx":
+			txDetay(w, r)
+		case "/api/block": // Yeni rota
+			blockInfo(w, r)
 		default:
 			http.Error(w, "Not Found", http.StatusNotFound)
 		}
@@ -49,5 +45,20 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func init() {
+	stack, err := node.New(&node.Config{})
+	if err != nil {
+		panic(fmt.Errorf("Failed to create Ethereum node: %v", err))
+	}
+
+	ethConf := ethconfig.Defaults
+	ethereum, err := eth.New(stack, &ethConf)
+	if err != nil {
+		panic(fmt.Errorf("Failed to create Ethereum instance: %v", err))
+	}
+
+	if ethereum == nil {
+		panic("Ethereum instance is nil")
+	}
+
 	go startServer()
 }

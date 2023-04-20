@@ -11,7 +11,7 @@ hash sorgula:<input type="text" name="sorgula" id="sorguInput">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.3.5/axios.min.js"></script>
 <script>
     document.getElementById("tikla").addEventListener("click", function () {
-        axios.post('api/tx', {
+        axios.post('http://localhost:1983/api/tx', {
             sorgula: document.getElementById("sorguInput").value
         }, {
             headers: {
