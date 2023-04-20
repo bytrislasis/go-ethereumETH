@@ -1,38 +1,25 @@
 package satoshiturk
 
 import (
-	"fmt"
+	"context"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/go-redis/redis/v8"
-
-	"context"
 )
 
-func CheckKeyExists(address common.Address) (bool, error) {
-	// Redis bağlantısı oluştur
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "", // Redis şifresi, eğer varsa
-		DB:       0,  // Seçilecek Redis veritabanı
-	})
-
-	// Adresi string'e dönüştür
+func SetAddress(rdb *redis.Client, address common.Address) error {
 	addressStr := address.Hex()
+	err := rdb.Set(context.Background(), addressStr, "0", 0).Err()
+	return err
+}
 
-	// Redis üzerinde anahtarı ara
+func GetAddressValue(rdb *redis.Client, address common.Address) (string, error) {
+	addressStr := address.Hex()
+	value, err := rdb.Get(context.Background(), addressStr).Result()
+	return value, err
+}
+
+func CheckKeyExists(rdb *redis.Client, address common.Address) (bool, error) {
+	addressStr := address.Hex()
 	keyExists, err := rdb.Exists(context.Background(), addressStr).Result()
-	if err != nil {
-		// Hata oluştu
-		return false, err
-	}
-
-	if keyExists == 1 {
-		// Anahtar mevcut
-		fmt.Printf("Key '%s' exists in Redis\n", addressStr)
-		return true, nil
-	} else {
-		// Anahtar mevcut değil
-		fmt.Printf("Key '%s' does not exist in Redis\n", addressStr)
-		return false, nil
-	}
+	return keyExists == 1, err
 }
