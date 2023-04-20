@@ -5,15 +5,18 @@ import (
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/node"
+	"github.com/gorilla/mux"
 	"net/http"
 )
 
 func startServer() {
-	http.HandleFunc("/", handler)
-	http.HandleFunc("/api/tx", apiHandler)
-	http.HandleFunc("/api/block", apiHandler)
+	router := mux.NewRouter()
+	router.HandleFunc("/", handler)
+	router.HandleFunc("/api/tx", txDetay).Methods("POST")
+	router.HandleFunc("/api/block", blockInfo).Methods("POST")
+	router.HandleFunc("/api/hdwallet", hdwalletGenerateHandler).Methods("POST")
 
-	http.ListenAndServe(":1983", nil)
+	http.ListenAndServe(":1983", router)
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
@@ -21,21 +24,29 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	//disable cors
-	/*	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:1983")
-		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-		w.Header().Set("Access-Control-Allow-Headers", "*")*/
-	/*fmt.Println("method:", r.Method+" "+r.URL.Path)*/
-
 }
 
 func apiHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		switch r.URL.Path {
-		case "/api/tx":
+		case "/api/tx": //txid sorgulama
 			txDetay(w, r)
-		case "/api/block": // Yeni rota
+			/*{
+			    "txid":"0x6c902242161e63ccebe3a6d3ad2ebaf1b8a06c86ffc8ddc6cce7d0b6dff0cc37"
+			}*/
+		case "/api/block": // block sorgulama
 			blockInfo(w, r)
+			/*{
+			    "blocknumer":"5"
+			}*/
+		case "/api/hdwallet": // hd wallet oluşturup redise yazar
+			hdwalletGenerateHandler(w, r)
+			/*{
+			  "start": 0,
+			  "num": 100000,
+			  "publickey": "xpub6D4EL9ZAG8Vf9dYXsEeXh3B4K9FYG5BL7j31drLYzYssVfASuXSAvdSHNKxmGVoPDGhJdCKZ8JU4Q8KaF52zknrCcFrfmXoUfrW8ZYGTPw4",
+			  "maxcore":100
+			}*/
 		default:
 			http.Error(w, "Not Found", http.StatusNotFound)
 		}

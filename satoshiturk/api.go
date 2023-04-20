@@ -9,6 +9,7 @@ import (
 	"log"
 	"math/big"
 	"net/http"
+	"time"
 )
 
 type blockRequest struct {
@@ -37,6 +38,19 @@ type blockResponse struct {
 	GasUsed      uint64      `json:"gasUsed"`
 	Timestamp    uint64      `json:"timestamp"`
 	Transactions interface{} `json:"transactions"`
+}
+
+type hdwalletRequest struct {
+	Start     uint32 `json:"start"`
+	Num       uint32 `json:"num"`
+	PublicKey string `json:"publickey"`
+	maxCore   uint32 `json:"maxcore"`
+	numThread uint32 `json:"thread"`
+}
+
+type hdwalletResponse struct {
+	Status  string `json:"status"`
+	Message string `json:"message"`
 }
 
 func txDetay(w http.ResponseWriter, r *http.Request) {
@@ -115,4 +129,34 @@ func blockInfo(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+}
+
+func hdwalletGenerateHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "POST" {
+		var req hdwalletRequest
+
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Invalid request data: %v", err), http.StatusBadRequest)
+			return
+		}
+
+		startTime := time.Now() // İşlemin başlangıç zamanını kaydedin
+		Generate(req.Start, req.Num, req.PublicKey, req.maxCore)
+		elapsedTime := time.Since(startTime) // Geçen süreyi hesaplayın
+
+		minutes := int(elapsedTime.Minutes())
+		seconds := int(elapsedTime.Seconds()) % 60
+		milliseconds := elapsedTime.Milliseconds() % 1000
+
+		response := hdwalletResponse{
+			Status:  "success",
+			Message: fmt.Sprintf("Adres ekleme süresi: %d dakika, %d saniye, %d milisaniye", minutes, seconds, milliseconds),
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	} else {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+	}
 }
