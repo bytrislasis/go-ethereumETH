@@ -1,4 +1,4 @@
-package satoshiturk
+package main
 
 import (
 	"context"
