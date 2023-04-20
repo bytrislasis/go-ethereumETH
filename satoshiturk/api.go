@@ -1,8 +1,9 @@
-package main
+package satoshiturk
 
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"log"
@@ -10,6 +11,7 @@ import (
 )
 
 func txSorgula(w http.ResponseWriter, r *http.Request) {
+	fmt.Print("--------------------------------------------------------------------")
 	var data map[string]string
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {

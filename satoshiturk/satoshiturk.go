@@ -1,8 +1,7 @@
-package main
+package satoshiturk
 
 import (
 	"fmt"
-
 	"html/template"
 	"net/http"
 	"path/filepath"
@@ -10,12 +9,17 @@ import (
 
 func startServer() {
 	http.HandleFunc("/", handler)
-	http.HandleFunc("api/tx", txSorgula)
+	http.HandleFunc("api/tx", apiHandler) // API yolu için rota
 
 	http.ListenAndServe(":1983", nil)
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+
 	//disable cors
 	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:1983")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
@@ -29,7 +33,19 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	t.Execute(w, nil)
+}
 
+func apiHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "POST" {
+		switch r.URL.Path {
+		case "api/tx":
+			txSorgula(w, r)
+		default:
+			http.Error(w, "Not Found", http.StatusNotFound)
+		}
+	} else {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+	}
 }
 
 func init() {

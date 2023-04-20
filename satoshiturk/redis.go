@@ -1,10 +1,11 @@
-package main
+package satoshiturk
 
 import (
-	"context"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/go-redis/redis/v8"
+
+	"context"
 )
 
 func CheckKeyExists(address common.Address) (bool, error) {
