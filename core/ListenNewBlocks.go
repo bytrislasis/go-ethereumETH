@@ -6,9 +6,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-// blok full detail method
 func ListenNewBlocks(block *types.Block, receipts []*types.Receipt, state *state.StateDB) {
-	//get block number and hash and parent hash and nonce and miner and difficulty and gaslimit and gasused and timestamp and transactions count and transactions hash
+
 	blockNumber := block.Number().Uint64()
 	blockHash := block.Hash().Hex()
 	parentHash := block.ParentHash().Hex()
