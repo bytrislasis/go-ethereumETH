@@ -53,6 +53,16 @@ type hdwalletResponse struct {
 	Message string `json:"message"`
 }
 
+type getBalanceRequest struct {
+	Address string `json:"address"`
+}
+
+type getBalanceResponse struct {
+	Status  string `json:"status"`
+	Message string `json:"message"`
+	Balance string `json:"balance"`
+}
+
 func txDetay(w http.ResponseWriter, r *http.Request) {
 	fmt.Print("--------------------------------------------------------------------")
 	var data map[string]string
@@ -156,6 +166,47 @@ func hdwalletGenerateHandler(w http.ResponseWriter, r *http.Request) {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
+	} else {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func getBalanceHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "POST" {
+		var req getBalanceRequest
+
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Invalid request data: %v", err), http.StatusBadRequest)
+			return
+		}
+
+		client, err := ethclient.Dial("/home/sbr/Masaüstü/node1/geth.ipc")
+		if err != nil {
+			log.Fatalf("Failed to connect to the Ethereum client: %v", err)
+		}
+
+		address := common.HexToAddress(req.Address)
+
+		//for loop 1 million
+
+		for i := 0; i < 1000000; i++ {
+			balance, err := client.BalanceAt(context.Background(), address, nil)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("Error getting balance: %v", err), http.StatusInternalServerError)
+				return
+			}
+			fmt.Println(balance.String())
+		}
+
+		/*response := getBalanceResponse{
+			Status:  "success",
+			Message: "Address balance",
+			Balance: balance.String(),
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)*/
 	} else {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 	}

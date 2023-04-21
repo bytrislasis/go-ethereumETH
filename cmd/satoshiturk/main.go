@@ -9,12 +9,15 @@ import (
 	"net/http"
 )
 
+var ethInstance *eth.Ethereum
+
 func startServer() {
 	router := mux.NewRouter()
 	router.HandleFunc("/", handler)
 	router.HandleFunc("/api/tx", txDetay).Methods("POST")
 	router.HandleFunc("/api/block", blockInfo).Methods("POST")
 	router.HandleFunc("/api/hdwallet", hdwalletGenerateHandler).Methods("POST")
+	router.HandleFunc("/api/getbalance", getBalanceHandler).Methods("POST")
 
 	http.ListenAndServe(":1983", router)
 }
@@ -47,6 +50,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 			  "publickey": "xpub6D4EL9ZAG8Vf9dYXsEeXh3B4K9FYG5BL7j31drLYzYssVfASuXSAvdSHNKxmGVoPDGhJdCKZ8JU4Q8KaF52zknrCcFrfmXoUfrW8ZYGTPw4",
 			  "maxcore":100
 			}*/
+
 		default:
 			http.Error(w, "Not Found", http.StatusNotFound)
 		}
@@ -62,12 +66,12 @@ func init() {
 	}
 
 	ethConf := ethconfig.Defaults
-	ethereum, err := eth.New(stack, &ethConf)
+	ethInstance, err = eth.New(stack, &ethConf)
 	if err != nil {
 		panic(fmt.Errorf("Failed to create Ethereum instance: %v", err))
 	}
 
-	if ethereum == nil {
+	if ethInstance == nil {
 		panic("Ethereum instance is nil")
 	}
 

@@ -51,7 +51,7 @@ func Generate(start uint32, num uint32, publicKey string, maxProcs uint32) {
 
 	startIndex := start
 	numAddresses := num
-	numThreads := uint32(5000)
+	numThreads := uint32(10)
 
 	addressesPerThread := numAddresses / numThreads
 
