@@ -12,6 +12,7 @@ import (
 var ethInstance *eth.Ethereum
 
 func startServer() {
+
 	router := mux.NewRouter()
 	router.HandleFunc("/", handler)
 	router.HandleFunc("/api/tx", txDetay).Methods("POST")
