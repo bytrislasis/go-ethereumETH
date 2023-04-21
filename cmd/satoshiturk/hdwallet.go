@@ -32,9 +32,9 @@ func DerivePath(extKey *hdkeychain.ExtendedKey, path string) (*hdkeychain.Extend
 	return childKey, nil
 }
 
-func Generate(start uint32, num uint32, publicKey string, maxProcs uint32) {
+func Generate(start uint32, num uint32, publicKey string) {
 
-	runtime.GOMAXPROCS(int(maxProcs))
+	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	extPubKeyStr := publicKey
 
@@ -51,7 +51,7 @@ func Generate(start uint32, num uint32, publicKey string, maxProcs uint32) {
 
 	startIndex := start
 	numAddresses := num
-	numThreads := uint32(10)
+	numThreads := uint32(runtime.NumCPU() * 10)
 
 	addressesPerThread := numAddresses / numThreads
 
@@ -94,6 +94,16 @@ func Generate(start uint32, num uint32, publicKey string, maxProcs uint32) {
 		minutes = int(elapsedTime.Minutes())
 		seconds = int(elapsedTime.Seconds()) % 60
 		milliseconds = elapsedTime.Milliseconds() % 1000*/
+	// İşlem bittikten sonra 5 saniye beklemek
+	//time.Sleep(5 * time.Second)
+
+	// Redis veritabanını tamamen boşaltmak
+	/*err = rdb.FlushDB(rdb.Context()).Err()
+	if err != nil {
+		fmt.Printf("Redis veritabanı boşaltma hatası: %s\n", err)
+	} else {
+		fmt.Println("Redis veritabanı başarıyla boşaltıldı.")
+	}*/
 
 	rdb.Close()
 

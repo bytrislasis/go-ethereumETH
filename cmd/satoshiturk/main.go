@@ -18,6 +18,7 @@ func startServer() {
 	router.HandleFunc("/api/block", blockInfo).Methods("POST")
 	router.HandleFunc("/api/hdwallet", hdwalletGenerateHandler).Methods("POST")
 	router.HandleFunc("/api/getbalance", getBalanceHandler).Methods("POST")
+	router.HandleFunc("/api/hdgetbalance", hdgetBalanceHandler).Methods("POST")
 
 	http.ListenAndServe(":1983", router)
 }
@@ -44,13 +45,22 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 			}*/
 		case "/api/hdwallet": // hd wallet oluşturup redise yazar
 			hdwalletGenerateHandler(w, r)
+		/*{
+		  "start": 0,
+		  "num": 100000,
+		  "publickey": "xpub6D4EL9ZAG8Vf9dYXsEeXh3B4K9FYG5BL7j31drLYzYssVfASuXSAvdSHNKxmGVoPDGhJdCKZ8JU4Q8KaF52zknrCcFrfmXoUfrW8ZYGTPw4",
+		  "maxcore":100
+		}*/
+		case "/api/getbalance": // hd wallet oluşturup redise yazar
+			getBalanceHandler(w, r)
+		/*{
+		    "address": "0x9849943a82AFA29EcFEC61e80AfdfE7EA4357a33"
+		}*/
+		case "/api/hdgetbalance": // hd wallet oluşturup redise yazar
+			getBalanceHandler(w, r)
 			/*{
-			  "start": 0,
-			  "num": 100000,
-			  "publickey": "xpub6D4EL9ZAG8Vf9dYXsEeXh3B4K9FYG5BL7j31drLYzYssVfASuXSAvdSHNKxmGVoPDGhJdCKZ8JU4Q8KaF52zknrCcFrfmXoUfrW8ZYGTPw4",
-			  "maxcore":100
+			    "address": "0x9849943a82AFA29EcFEC61e80AfdfE7EA4357a33"
 			}*/
-
 		default:
 			http.Error(w, "Not Found", http.StatusNotFound)
 		}
@@ -76,4 +86,5 @@ func init() {
 	}
 
 	go startServer()
+
 }
