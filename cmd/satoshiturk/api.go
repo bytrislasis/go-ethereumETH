@@ -14,6 +14,7 @@ import (
 	"math/rand"
 	"net/http"
 	"runtime"
+	"sync"
 	"time"
 )
 
@@ -167,6 +168,7 @@ func blockInfo(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+
 }
 
 func hdwalletGenerateHandler(w http.ResponseWriter, r *http.Request) {
@@ -200,6 +202,8 @@ func hdwalletGenerateHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getBalanceHandler(w http.ResponseWriter, r *http.Request) {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
 	if r.Method == "POST" {
 		var req getBalanceRequest
 
@@ -215,22 +219,37 @@ func getBalanceHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		address := common.HexToAddress(req.Address)
-		balance, err := client.BalanceAt(context.Background(), address, nil)
 
-		//çoklu sorgulama
-		/*for i := 0; i < 1000000; i++ {
-			balance, err := client.BalanceAt(context.Background(), address, nil)
-			if err != nil {
-				http.Error(w, fmt.Sprintf("Error getting balance: %v", err), http.StatusInternalServerError)
-				return
-			}
-			fmt.Println(balance.String())
-		}*/
+		numQueries := 1000
+		resultChan := make(chan *big.Int, numQueries)
+		var wg sync.WaitGroup
+		wg.Add(numQueries)
+
+		for i := 0; i < numQueries; i++ {
+			go func() {
+				defer wg.Done()
+				balance, err := client.BalanceAt(context.Background(), address, nil)
+				if err != nil {
+					log.Printf("Error getting balance: %v", err)
+					resultChan <- big.NewInt(0)
+				} else {
+					resultChan <- balance
+				}
+			}()
+		}
+
+		wg.Wait()
+		close(resultChan)
+
+		var totalBalance big.Int
+		for balance := range resultChan {
+			totalBalance.Add(&totalBalance, balance)
+		}
 
 		response := getBalanceResponse{
 			Status:  "success",
 			Message: "Address balance",
-			Balance: balance.String(),
+			Balance: totalBalance.String(),
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -323,6 +342,8 @@ func hdgetBalanceHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func sendRandomEthHandler(w http.ResponseWriter, r *http.Request) {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
 	if r.Method == "POST" {
 		var req sendRandomEthRequest
 		err := json.NewDecoder(r.Body).Decode(&req)
@@ -461,3 +482,14 @@ func addrgenerate(xpub string, startIndex, endIndex uint32) ([]string, error) {
 
 	return addresses, nil
 }
+
+//telegram mesaj atma
+/*bot := NewTelegramBot("6191705778:AAH2aExyb-bJelRT_B8f-tMBoIYSKkEGBuU", "-1001927709952")
+
+response, err = bot.SendMessage("text", nil)
+if err != nil {
+log.Printf("Error sending message: %v", err)
+} else {
+log.Printf("Message sent: %v", response)
+
+}*/
