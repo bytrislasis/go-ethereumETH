@@ -9,6 +9,8 @@ import (
 	"net/http"
 )
 
+var getIpcPath = "/home/sbr/Masaüstü/node1/geth.ipc"
+
 var ethInstance *eth.Ethereum
 
 func startServer() {
@@ -20,6 +22,7 @@ func startServer() {
 	router.HandleFunc("/api/hdwallet", hdwalletGenerateHandler).Methods("POST")
 	router.HandleFunc("/api/getbalance", getBalanceHandler).Methods("POST")
 	router.HandleFunc("/api/hdgetbalance", hdgetBalanceHandler).Methods("POST")
+	router.HandleFunc("/api/randomethsender", sendRandomEthHandler).Methods("POST")
 
 	http.ListenAndServe(":1983", router)
 }
@@ -59,6 +62,11 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		}*/
 		case "/api/hdgetbalance": // hd wallet oluşturup redise yazar
 			getBalanceHandler(w, r)
+		/*{
+		    "address": "0x9849943a82AFA29EcFEC61e80AfdfE7EA4357a33"
+		}*/
+		case "/api/randomethsender": // hd wallet oluşturup redise yazar
+			sendRandomEthHandler(w, r)
 			/*{
 			    "address": "0x9849943a82AFA29EcFEC61e80AfdfE7EA4357a33"
 			}*/

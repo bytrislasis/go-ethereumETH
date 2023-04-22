@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"log"
 	"math/big"
+	"math/rand"
 	"net/http"
 	"runtime"
 	"time"
@@ -75,6 +77,18 @@ type hdBalanceResult struct {
 	Address  string `json:"address"`
 	Balance  string `json:"balance"`
 	Duration string `json:"duration"`
+	Index    uint32 `json:"index"`
+}
+
+type sendRandomEthRequest struct {
+	PrivateKey string `json:"privatekey"`
+	StartIndex uint32 `json:"startindex"`
+	EndIndex   uint32 `json:"endindex"`
+	PublicKey  string `json:"publickey"`
+}
+
+type sendRandomEthResponse struct {
+	TxHashes []string `json:"tx_hashes"`
 }
 
 func txDetay(w http.ResponseWriter, r *http.Request) {
@@ -86,7 +100,7 @@ func txDetay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client, err := ethclient.Dial("/home/sbr/Masaüstü/node1/geth.ipc")
+	client, err := ethclient.Dial(getIpcPath)
 	if err != nil {
 		log.Fatalf("Failed to connect to the Ethereum client: %v", err)
 	}
@@ -124,7 +138,7 @@ func blockInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client, err := ethclient.Dial("/home/sbr/Masaüstü/node1/geth.ipc")
+	client, err := ethclient.Dial(getIpcPath)
 	if err != nil {
 		log.Fatalf("Failed to connect to the Ethereum client: %v", err)
 	}
@@ -195,7 +209,7 @@ func getBalanceHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		client, err := ethclient.Dial("/home/sbr/Masaüstü/node1/geth.ipc")
+		client, err := ethclient.Dial(getIpcPath)
 		if err != nil {
 			log.Fatalf("Failed to connect to the Ethereum client: %v", err)
 		}
@@ -238,7 +252,7 @@ func hdgetBalanceHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		client, err := ethclient.Dial("/home/sbr/Masaüstü/node1/geth.ipc")
+		client, err := ethclient.Dial(getIpcPath)
 		if err != nil {
 			log.Fatalf("Failed to connect to the Ethereum client: %v", err)
 		}
@@ -277,25 +291,23 @@ func hdgetBalanceHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if balance.String() != "0" {
+				// Adresin bulunma süresini hesapla
+				foundTime := time.Now()
+				elapsedTime := foundTime.Sub(startTime)
+				minutes := int(elapsedTime.Minutes())
+				seconds := int(elapsedTime.Seconds()) % 60
+				milliseconds := elapsedTime.Milliseconds() % 1000
+				duration := fmt.Sprintf("%d dakika, %d saniye, %d milisaniye", minutes, seconds, milliseconds)
+
+				// hdBalanceResult yapısına bulunma süresini ekle
 				result := hdBalanceResult{
-					Address: ethAddress.String(),
-					Balance: balance.String(),
+					Address:  ethAddress.String(),
+					Balance:  balance.String(),
+					Index:    i,
+					Duration: duration,
 				}
 				results = append(results, result)
 			}
-		}
-
-		endTime := time.Now()
-		elapsedTime := endTime.Sub(startTime)
-
-		minutes := int(elapsedTime.Minutes())
-		seconds := int(elapsedTime.Seconds()) % 60
-		milliseconds := elapsedTime.Milliseconds() % 1000
-
-		duration := fmt.Sprintf("%d dakika, %d saniye, %d milisaniye", minutes, seconds, milliseconds)
-
-		for i := range results {
-			results[i].Duration = duration
 		}
 
 		// JSON response
@@ -308,4 +320,144 @@ func hdgetBalanceHandler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(response)
 	}
+}
+
+func sendRandomEthHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "POST" {
+		var req sendRandomEthRequest
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Invalid request data: %v", err), http.StatusBadRequest)
+			return
+		}
+
+		// IPC bağlantısı
+		client, err := ethclient.Dial(getIpcPath)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("IPC bağlantısı başarısız: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		// Private key'i ecdsa.PrivateKey'e dönüştür
+		privateKey, err := crypto.HexToECDSA(req.PrivateKey)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("private key dönüşümü başarısız: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		// Gönderici adresini elde et
+		fromAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
+
+		// Adresleri oluştur
+		xpub := req.PublicKey
+		start := req.StartIndex
+		end := req.EndIndex
+		addresses, err := addrgenerate(xpub, start, end)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Address generation error: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		// Nonce al
+		nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("nonce alma başarısız: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		// Chain ID al
+		chainID, err := client.NetworkID(context.Background())
+		if err != nil {
+			http.Error(w, fmt.Sprintf("chain id alma başarısız: %v", err), http.StatusInternalServerError)
+		}
+
+		var txHashes []string
+		for _, address := range addresses {
+			// Rastgele bir değerde ETH miktarı (0.1 ETH'den az) oluştur
+			rand.Seed(time.Now().UnixNano())
+			ethValue := big.NewInt(rand.Int63n(100000000000000000)) // 0.1 ETH'den az rastgele değer
+
+			// Transfer işlemi için gas limit ve gas fiyatı belirle
+			gasLimit := uint64(21000)
+			gasPrice, err := client.SuggestGasPrice(context.Background())
+			if err != nil {
+				http.Error(w, fmt.Sprintf("gas fiyatı önerisi başarısız: %v", err), http.StatusInternalServerError)
+				return
+			}
+
+			// İşlem yapısını oluştur
+			toAddress := common.HexToAddress(address)
+			tx := types.NewTransaction(nonce, toAddress, ethValue, gasLimit, gasPrice, nil)
+
+			// İşlemi imzala
+			signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("işlem imzalama başarısız: %v", err), http.StatusInternalServerError)
+				return
+			}
+
+			// İşlemi gönder
+			err = client.SendTransaction(context.Background(), signedTx)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("işlem gönderimi başarısız: %v", err), http.StatusInternalServerError)
+				return
+			}
+
+			txHash := signedTx.Hash().Hex()
+			fmt.Printf("İşlem gönderildi: %s\n", txHash)
+			txHashes = append(txHashes, txHash)
+
+			// Nonce değerini güncelle
+			nonce++
+		}
+
+		response := sendRandomEthResponse{
+			TxHashes: txHashes,
+		}
+
+		jsonResponse, err := json.Marshal(response)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("JSON conversion error: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(jsonResponse)
+	} else {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func addrgenerate(xpub string, startIndex, endIndex uint32) ([]string, error) {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	extPubKeyStr := xpub
+	extKey, err := hdkeychain.NewKeyFromString(extPubKeyStr)
+	if err != nil {
+		panic(err)
+	}
+
+	basla := startIndex
+	bitis := endIndex
+
+	var addresses []string
+	for i := basla; i < bitis; i++ {
+		path := fmt.Sprintf("0/%d", i)
+
+		childKey, err := DerivePath(extKey, path)
+		if err != nil {
+			panic(err)
+		}
+
+		rawPubKey, err := childKey.ECPubKey()
+		if err != nil {
+			panic(err)
+		}
+
+		ethAddresss := crypto.PubkeyToAddress(*rawPubKey.ToECDSA()).Hex()
+		addresses = append(addresses, ethAddresss)
+	}
+
+	return addresses, nil
 }
