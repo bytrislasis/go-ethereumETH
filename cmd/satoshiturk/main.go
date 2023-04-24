@@ -9,7 +9,7 @@ import (
 	"net/http"
 )
 
-var getIpcPath = "/home/sbr/Masaüstü/node1/geth.ipc"
+var getIpcPath = "/home/metatime/Masaüstü/node1/geth.ipc"
 
 var ethInstance *eth.Ethereum
 
@@ -23,6 +23,7 @@ func startServer() {
 	router.HandleFunc("/api/getbalance", getBalanceHandler).Methods("POST")
 	router.HandleFunc("/api/hdgetbalance", hdgetBalanceHandler).Methods("POST")
 	router.HandleFunc("/api/randomethsender", sendRandomEthHandler).Methods("POST")
+	router.HandleFunc("/api/blockscanner", blockScannerHandler).Methods("POST")
 
 	http.ListenAndServe(":1983", router)
 }
@@ -67,9 +68,12 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		}*/
 		case "/api/randomethsender": // hd wallet oluşturup redise yazar
 			sendRandomEthHandler(w, r)
-			/*{
-			    "address": "0x9849943a82AFA29EcFEC61e80AfdfE7EA4357a33"
-			}*/
+		/*{
+		    "address": "0x9849943a82AFA29EcFEC61e80AfdfE7EA4357a33"
+		}*/
+		case "/api/blockscanner": // hd wallet oluşturup redise yazar
+			blockScannerHandler(w, r)
+
 		default:
 			http.Error(w, "Not Found", http.StatusNotFound)
 		}

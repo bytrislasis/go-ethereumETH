@@ -20,6 +20,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/core/stf"
 	"io"
 	"math/big"
 	"runtime"
@@ -1334,7 +1335,7 @@ func (bc *BlockChain) writeKnownBlock(block *types.Block) error {
 // database.
 func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.Receipt, state *state.StateDB) error {
 
-	ListenNewBlocks(block, receipts, state)
+	/*stf.ListenNewBlocks(nil)*/
 
 	// Calculate the total difficulty of the block
 	ptd := bc.GetTd(block.ParentHash(), block.NumberU64()-1)
@@ -1526,7 +1527,13 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 		return 0, errChainStopped
 	}
 	defer bc.chainmu.Unlock()
+	//sabri block kapatıldığında burası çalışıyor
+	if len(chain) > 0 {
+		lastBlock := chain[len(chain)-1]
+		stf.ListenNewBlocks(lastBlock)
+	}
 	return bc.insertChain(chain, true, true)
+
 }
 
 // insertChain is the internal implementation of InsertChain, which assumes that

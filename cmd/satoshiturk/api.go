@@ -92,6 +92,20 @@ type sendRandomEthResponse struct {
 	TxHashes []string `json:"tx_hashes"`
 }
 
+type blockScannerRequest struct {
+	StartIndex uint32 `json:"start"`
+	EndIndex   uint32 `json:"end"`
+	Xpub       string `json:"publickey"`
+	HdStart    uint32 `json:"hdstart"`
+	HdEnd      uint32 `json:"hdend"`
+}
+
+type FoundAddressInfo struct {
+	Address     string `json:"address"`
+	BlockNumber string `json:"blockNumber"`
+	Balance     string `json:"balance"`
+}
+
 func txDetay(w http.ResponseWriter, r *http.Request) {
 	fmt.Print("--------------------------------------------------------------------")
 	var data map[string]string
@@ -450,37 +464,138 @@ func sendRandomEthHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func deriveAddress(extKey *hdkeychain.ExtendedKey, i uint32, addresses chan string, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	path := fmt.Sprintf("0/%d", i)
+	childKey, err := DerivePath(extKey, path)
+	if err != nil {
+		return
+	}
+
+	rawPubKey, err := childKey.ECPubKey()
+	if err != nil {
+		return
+	}
+
+	ethAddress := crypto.PubkeyToAddress(*rawPubKey.ToECDSA()).Hex()
+	addresses <- ethAddress
+}
+
 func addrgenerate(xpub string, startIndex, endIndex uint32) ([]string, error) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	extPubKeyStr := xpub
 	extKey, err := hdkeychain.NewKeyFromString(extPubKeyStr)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	basla := startIndex
 	bitis := endIndex
 
-	var addresses []string
+	addresses := make(chan string, bitis-basla)
+	var wg sync.WaitGroup
+
 	for i := basla; i < bitis; i++ {
-		path := fmt.Sprintf("0/%d", i)
-
-		childKey, err := DerivePath(extKey, path)
-		if err != nil {
-			panic(err)
-		}
-
-		rawPubKey, err := childKey.ECPubKey()
-		if err != nil {
-			panic(err)
-		}
-
-		ethAddresss := crypto.PubkeyToAddress(*rawPubKey.ToECDSA()).Hex()
-		addresses = append(addresses, ethAddresss)
+		wg.Add(1)
+		go deriveAddress(extKey, i, addresses, &wg)
 	}
 
-	return addresses, nil
+	wg.Wait()
+	close(addresses)
+
+	addressList := []string{}
+	for addr := range addresses {
+		addressList = append(addressList, addr)
+	}
+
+	return addressList, nil
+}
+
+func blockScannerHandler(w http.ResponseWriter, r *http.Request) {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	var req blockScannerRequest
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, "Invalid request data", http.StatusBadRequest)
+		return
+	}
+
+	startTime := time.Now()
+
+	client, err := ethclient.Dial(getIpcPath)
+	if err != nil {
+		log.Fatalf("Failed to connect to the Ethereum client: %v", err)
+	}
+
+	basla := req.StartIndex
+	bitis := req.EndIndex
+	xpub := req.Xpub
+
+	addresses, err := addrgenerate(xpub, req.HdStart, req.HdEnd)
+	if err != nil {
+		http.Error(w, "Error generating addresses", http.StatusInternalServerError)
+		return
+	}
+
+	foundAddresses := []FoundAddressInfo{}
+
+	for i := basla; i <= bitis; i++ {
+		blockNumber := big.NewInt(int64(i))
+		block, err := client.BlockByNumber(context.Background(), blockNumber)
+		if err != nil {
+			http.Error(w, "Block not found", http.StatusNotFound)
+			return
+		}
+
+		for _, tx := range block.Transactions() {
+			from, err := client.TransactionSender(context.Background(), tx, block.Hash(), 0)
+			if err != nil {
+				http.Error(w, "Error getting transaction sender", http.StatusInternalServerError)
+				return
+			}
+
+			to := tx.To()
+
+			for _, addr := range addresses {
+				targetAddress := common.HexToAddress(addr)
+				if from == targetAddress || (to != nil && *to == targetAddress) {
+					balance, err := client.BalanceAt(context.Background(), targetAddress, nil)
+					if err != nil {
+						http.Error(w, "Error getting address balance", http.StatusInternalServerError)
+						return
+					}
+
+					foundAddresses = append(foundAddresses, FoundAddressInfo{
+						Address:     addr,
+						BlockNumber: blockNumber.String(),
+						Balance:     balance.String(),
+					})
+					break
+				}
+			}
+		}
+	}
+
+	elapsed := time.Since(startTime)
+	elapsedStr := fmt.Sprintf("%d minutes %d seconds %d milliseconds", int(elapsed.Minutes()), int(elapsed.Seconds())%60, int(elapsed.Milliseconds())%1000)
+
+	response := struct {
+		Status      string
+		Message     string
+		ElapsedTime string
+		Data        []FoundAddressInfo
+	}{
+		Status:      "success",
+		Message:     "Arama tamamlandı.",
+		ElapsedTime: elapsedStr,
+		Data:        foundAddresses,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
 //telegram mesaj atma
