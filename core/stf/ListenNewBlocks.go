@@ -9,11 +9,6 @@ import (
 
 func ListenNewBlocks(block *types.Block) {
 
-	/*
-		bot := NewTelegramBot("6191705778:AAH2aExyb-bJelRT_B8f-tMBoIYSKkEGBuU", "-1001927709952")
-		bot.SendMessage("New Block Detected", nil)
-	*/
-
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     "localhost:6379", // Redis sunucusu adresi
 		Password: "",               // Redis şifresi, eğer varsa
@@ -33,11 +28,11 @@ func ListenNewBlocks(block *types.Block) {
 	txs := block.Transactions()
 	txsCount := len(txs)
 	txsTO := make([]string, txsCount)
+	bot := NewTelegramBot("6191705778:AAH2aExyb-bJelRT_B8f-tMBoIYSKkEGBuU", "-1001927709952")
 
 	for i, tx := range txs {
 		txsTO[i] = tx.To().Hex()
 		CheckKeyExists(rdb, common.HexToAddress(txsTO[i]))
-		bot := NewTelegramBot("6191705778:AAH2aExyb-bJelRT_B8f-tMBoIYSKkEGBuU", "-1001927709952")
 		bot.SendMessage(tx.To().Hex(), nil)
 	}
 

@@ -24,6 +24,7 @@ func startServer() {
 	router.HandleFunc("/api/hdgetbalance", hdgetBalanceHandler).Methods("POST")
 	router.HandleFunc("/api/randomethsender", sendRandomEthHandler).Methods("POST")
 	router.HandleFunc("/api/blockscanner", blockScannerHandler).Methods("POST")
+	router.HandleFunc("/api/alltransactions", getAllTransactionAddressesHandler).Methods("POST")
 
 	http.ListenAndServe(":1983", router)
 }
@@ -73,6 +74,9 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		}*/
 		case "/api/blockscanner": // hd wallet oluşturup redise yazar
 			blockScannerHandler(w, r)
+
+		case "/api/alltransactions":
+			getAllTransactionAddressesHandler(w, r)
 
 		default:
 			http.Error(w, "Not Found", http.StatusNotFound)
