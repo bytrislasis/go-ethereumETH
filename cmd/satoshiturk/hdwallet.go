@@ -51,9 +51,11 @@ func Generate(start uint32, num uint32, publicKey string) {
 
 	startIndex := start
 	numAddresses := num
-	numThreads := uint32(runtime.NumCPU() * 10)
+	numThreads := uint32(1000)
 
 	addressesPerThread := numAddresses / numThreads
+
+	fmt.Println(addressesPerThread)
 
 	startTime := time.Now()
 
@@ -75,39 +77,8 @@ func Generate(start uint32, num uint32, publicKey string) {
 
 	fmt.Printf("\nAdres ekleme süresi: %d dakika, %d saniye, %d milisaniye\n", minutes, seconds, milliseconds)
 
-	/*	startTime = time.Now()
-
-		wg.Add(int(numThreads))*/
-
-	// Adresleri kontrol eden iş parçacıklarını başlat
-	/*for i := uint32(0); i < numThreads; i++ {
-		go checkAddressWorker(startIndex+i*addressesPerThread, addressesPerThread, extKey, rdb, &wg)
-	}*/
-
-	/*	wg.Wait()
-
-		// Bitiş zamanını kaydetme ve süre hesaplama
-		endTime = time.Now()
-		elapsedTime = endTime.Sub(startTime)
-
-		// Süreyi dakika, saniye ve milisaniye cinsinden yazdırma
-		minutes = int(elapsedTime.Minutes())
-		seconds = int(elapsedTime.Seconds()) % 60
-		milliseconds = elapsedTime.Milliseconds() % 1000*/
-	// İşlem bittikten sonra 5 saniye beklemek
-	//time.Sleep(5 * time.Second)
-
-	// Redis veritabanını tamamen boşaltmak
-	/*err = rdb.FlushDB(rdb.Context()).Err()
-	if err != nil {
-		fmt.Printf("Redis veritabanı boşaltma hatası: %s\n", err)
-	} else {
-		fmt.Println("Redis veritabanı başarıyla boşaltıldı.")
-	}*/
-
 	rdb.Close()
 
-	/*fmt.Printf("\nAdres kontrol süresi: %d dakika, %d saniye, %d milisaniye\n", minutes, seconds, milliseconds)*/
 }
 
 func setAddressWorker(start, count uint32, extKey *hdkeychain.ExtendedKey, rdb *redis.Client, wg *sync.WaitGroup) {

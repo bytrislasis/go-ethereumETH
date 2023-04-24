@@ -93,14 +93,14 @@ type sendRandomEthResponse struct {
 }
 
 type blockScannerRequest struct {
-	StartIndex uint32 `json:"start"`
-	EndIndex   uint32 `json:"end"`
+	StartIndex uint32 `json:"blockstartnumber"`
+	EndIndex   uint32 `json:"blockendnumber"`
 	Xpub       string `json:"publickey"`
 	HdStart    uint32 `json:"hdstart"`
 	HdEnd      uint32 `json:"hdend"`
 }
 
-type FoundAddressInfo struct {
+type blockScannerResponse struct {
 	Address     string `json:"address"`
 	BlockNumber string `json:"blockNumber"`
 	Balance     string `json:"balance"`
@@ -540,7 +540,7 @@ func blockScannerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	foundAddresses := []FoundAddressInfo{}
+	foundAddresses := []blockScannerResponse{}
 
 	for i := basla; i <= bitis; i++ {
 		blockNumber := big.NewInt(int64(i))
@@ -568,7 +568,7 @@ func blockScannerHandler(w http.ResponseWriter, r *http.Request) {
 						return
 					}
 
-					foundAddresses = append(foundAddresses, FoundAddressInfo{
+					foundAddresses = append(foundAddresses, blockScannerResponse{
 						Address:     addr,
 						BlockNumber: blockNumber.String(),
 						Balance:     balance.String(),
@@ -586,7 +586,7 @@ func blockScannerHandler(w http.ResponseWriter, r *http.Request) {
 		Status      string
 		Message     string
 		ElapsedTime string
-		Data        []FoundAddressInfo
+		Data        []blockScannerResponse
 	}{
 		Status:      "success",
 		Message:     "Arama tamamlandı.",
