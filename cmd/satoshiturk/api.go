@@ -115,7 +115,7 @@ func txDetay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client, err := ethclient.Dial(getIpcPath)
+	client, err := ethclient.Dial(IPCPATH)
 	if err != nil {
 		log.Fatalf("Failed to connect to the Ethereum client: %v", err)
 	}
@@ -153,7 +153,7 @@ func blockInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client, err := ethclient.Dial(getIpcPath)
+	client, err := ethclient.Dial(IPCPATH)
 	if err != nil {
 		log.Fatalf("Failed to connect to the Ethereum client: %v", err)
 	}
@@ -227,7 +227,7 @@ func getBalanceHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		client, err := ethclient.Dial(getIpcPath)
+		client, err := ethclient.Dial(IPCPATH)
 		if err != nil {
 			log.Fatalf("Failed to connect to the Ethereum client: %v", err)
 		}
@@ -285,7 +285,7 @@ func hdgetBalanceHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		client, err := ethclient.Dial(getIpcPath)
+		client, err := ethclient.Dial(IPCPATH)
 		if err != nil {
 			log.Fatalf("Failed to connect to the Ethereum client: %v", err)
 		}
@@ -367,7 +367,7 @@ func sendRandomEthHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// IPC bağlantısı
-		client, err := ethclient.Dial(getIpcPath)
+		client, err := ethclient.Dial(IPCPATH)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("IPC bağlantısı başarısız: %v", err), http.StatusInternalServerError)
 			return
@@ -525,7 +525,7 @@ func blockScannerHandler(w http.ResponseWriter, r *http.Request) {
 
 	startTime := time.Now()
 
-	client, err := ethclient.Dial(getIpcPath)
+	client, err := ethclient.Dial(IPCPATH)
 	if err != nil {
 		log.Fatalf("Failed to connect to the Ethereum client: %v", err)
 	}

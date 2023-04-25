@@ -9,7 +9,7 @@ import (
 	"net/http"
 )
 
-var getIpcPath = "/home/metatime/Masaüstü/node1/geth.ipc"
+var IPCPATH = "/home/metatime/Masaüstü/node1/geth.ipc"
 
 var ethInstance *eth.Ethereum
 

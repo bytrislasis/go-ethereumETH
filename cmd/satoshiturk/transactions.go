@@ -23,7 +23,7 @@ func getAllTransactionAddressesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client, err := ethclient.Dial(getIpcPath)
+	client, err := ethclient.Dial(IPCPATH)
 	if err != nil {
 		log.Fatalf("Failed to connect to the Ethereum client: %v", err)
 	}
