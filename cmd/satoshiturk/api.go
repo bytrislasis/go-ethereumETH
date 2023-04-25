@@ -71,7 +71,7 @@ type getBalanceResponse struct {
 type hdgetBalanceRequest struct {
 	Publickey string `json:"publickey"`
 	Start     uint32 `json:"start"`
-	Num       uint32 `json:"num"`
+	Num       uint32 `json:"end"`
 }
 
 type hdBalanceResult struct {

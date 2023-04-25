@@ -1,30 +1,36 @@
 package satoshiturk
 
 import (
+	"encoding/base64"
 	"fmt"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/gorilla/mux"
 	"net/http"
+	"strings"
 )
 
 var IPCPATH = "/home/metatime/Masaüstü/node1/geth.ipc"
 
 var ethInstance *eth.Ethereum
 
-func startServer() {
+const (
+	username = "sabri"
+	password = "MetaTime"
+)
 
+func startServer() {
 	router := mux.NewRouter()
 	router.HandleFunc("/", handler)
-	router.HandleFunc("/api/tx", txDetay).Methods("POST")
-	router.HandleFunc("/api/block", blockInfo).Methods("POST")
-	router.HandleFunc("/api/hdwallet", hdwalletGenerateHandler).Methods("POST")
-	router.HandleFunc("/api/getbalance", getBalanceHandler).Methods("POST")
-	router.HandleFunc("/api/hdgetbalance", hdgetBalanceHandler).Methods("POST")
-	router.HandleFunc("/api/randomethsender", sendRandomEthHandler).Methods("POST")
-	router.HandleFunc("/api/blockscanner", blockScannerHandler).Methods("POST")
-	router.HandleFunc("/api/alltransactions", getAllTransactionAddressesHandler).Methods("POST")
+	router.HandleFunc("/api/tx", basicAuthMiddleware(txDetay)).Methods("POST")
+	router.HandleFunc("/api/block", basicAuthMiddleware(blockInfo)).Methods("POST")
+	router.HandleFunc("/api/hdwallet", basicAuthMiddleware(hdwalletGenerateHandler)).Methods("POST")
+	router.HandleFunc("/api/getbalance", basicAuthMiddleware(getBalanceHandler)).Methods("POST")
+	router.HandleFunc("/api/hdgetbalance", basicAuthMiddleware(hdgetBalanceHandler)).Methods("POST")
+	router.HandleFunc("/api/randomethsender", basicAuthMiddleware(sendRandomEthHandler)).Methods("POST")
+	router.HandleFunc("/api/blockscanner", basicAuthMiddleware(blockScannerHandler)).Methods("POST")
+	router.HandleFunc("/api/alltransactions", basicAuthMiddleware(getAllTransactionAddressesHandler)).Methods("POST")
 
 	http.ListenAndServe(":1983", router)
 }
@@ -104,4 +110,34 @@ func init() {
 
 	go startServer()
 
+}
+
+func basicAuthMiddleware(handler http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		auth := r.Header.Get("Authorization")
+		if auth == "" {
+			http.Error(w, "Kimlik Doğrulanamadı", http.StatusUnauthorized)
+			return
+		}
+
+		authParts := strings.Split(auth, " ")
+		if len(authParts) != 2 || authParts[0] != "Basic" {
+			http.Error(w, "Invalid authorization header", http.StatusUnauthorized)
+			return
+		}
+
+		decoded, err := base64.StdEncoding.DecodeString(authParts[1])
+		if err != nil {
+			http.Error(w, "Invalid base64 encoding", http.StatusUnauthorized)
+			return
+		}
+
+		userAndPassword := strings.Split(string(decoded), ":")
+		if len(userAndPassword) != 2 || userAndPassword[0] != username || userAndPassword[1] != password {
+			http.Error(w, "Invalid username or password", http.StatusUnauthorized)
+			return
+		}
+
+		handler.ServeHTTP(w, r)
+	}
 }
