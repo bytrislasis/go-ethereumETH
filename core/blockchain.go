@@ -1532,6 +1532,7 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 		fmt.Println("LevelDB'ye Yazılan Son Blok : ", lastBlock.NumberU64())
 		listenOnce.Do(func() {
 			stf.ListenNewBlocks(lastBlock)
+
 		})
 	}
 

@@ -55,7 +55,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 			/*{
 			    "blocknumer":"5"
 			}*/
-		case "/api/hdwallet": // hd wallet oluşturup redise yazar
+		case "/api/hdwallet":
 			hdwalletGenerateHandler(w, r)
 		/*{
 		  "start": 0,
@@ -63,22 +63,22 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		  "publickey": "xpub6D4EL9ZAG8Vf9dYXsEeXh3B4K9FYG5BL7j31drLYzYssVfASuXSAvdSHNKxmGVoPDGhJdCKZ8JU4Q8KaF52zknrCcFrfmXoUfrW8ZYGTPw4",
 		  "maxcore":100
 		}*/
-		case "/api/getbalance": // hd wallet oluşturup redise yazar
+		case "/api/getbalance":
 			getBalanceHandler(w, r)
 		/*{
 		    "address": "0x9849943a82AFA29EcFEC61e80AfdfE7EA4357a33"
 		}*/
-		case "/api/hdgetbalance": // hd wallet oluşturup redise yazar
+		case "/api/hdgetbalance":
 			getBalanceHandler(w, r)
 		/*{
 		    "address": "0x9849943a82AFA29EcFEC61e80AfdfE7EA4357a33"
 		}*/
-		case "/api/randomethsender": // hd wallet oluşturup redise yazar
+		case "/api/randomethsender":
 			sendRandomEthHandler(w, r)
 		/*{
 		    "address": "0x9849943a82AFA29EcFEC61e80AfdfE7EA4357a33"
 		}*/
-		case "/api/blockscanner": // hd wallet oluşturup redise yazar
+		case "/api/blockscanner":
 			blockScannerHandler(w, r)
 
 		case "/api/alltransactions":

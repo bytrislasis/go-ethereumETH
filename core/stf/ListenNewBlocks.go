@@ -5,6 +5,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/go-redis/redis/v8"
+	"time"
 )
 
 func ListenNewBlocks(block *types.Block) {
@@ -15,39 +16,28 @@ func ListenNewBlocks(block *types.Block) {
 		DB:       0,                // Seçilecek Redis veritabanı
 	})
 
-	/*blockNumber := block.Number().Uint64()
-	blockHash := block.Hash().Hex()
-	parentHash := block.ParentHash().Hex()
-	nonce := block.Nonce()
-
-	miner := block.Coinbase().Hex()
-	difficulty := block.Difficulty().Uint64()
-	gasLimit := block.GasLimit()
-	gasUsed := block.GasUsed()
-	timestamp := block.Time()*/
 	txs := block.Transactions()
-	txsCount := len(txs)
-	txsTO := make([]string, txsCount)
+
 	bot := NewTelegramBot("6191705778:AAH2aExyb-bJelRT_B8f-tMBoIYSKkEGBuU", "-1001927709952")
 
-	for i, tx := range txs {
-		txsTO[i] = tx.To().Hex()
-		CheckKeyExists(rdb, common.HexToAddress(txsTO[i]))
-		bot.SendMessage(tx.To().Hex(), nil)
+	for _, tx := range txs {
+		toAddress := tx.To().Hex()
+		check, _ := CheckKeyExists(rdb, common.HexToAddress(toAddress))
+		if check != false {
+			txHash := tx.Hash().Hex()
+
+			value := tx.Value()
+			gas := tx.Gas()
+			gasPrice := tx.GasPrice()
+			nonce := tx.Nonce()
+
+			message := fmt.Sprintf("Transaction Detected:\n %s\nTo: %s\nTx Hash: %s\nValue: %s ETH\nGas: %d\nGas Price: %s GWei\nNonce: %d",
+				toAddress, txHash, value.String(), gas, gasPrice.String(), nonce)
+
+			bot.SendMessage(message, nil)
+
+			//sleep 3 seconds
+			time.Sleep(1 * time.Second)
+		}
 	}
-
-	fmt.Println(txsTO)
-
-	/*fmt.Println("blockNumber: ", blockNumber)
-	fmt.Println("blockHash: ", blockHash)
-	fmt.Println("parentHash: ", parentHash)
-	fmt.Println("nonce: ", nonce)
-	fmt.Println("miner: ", miner)
-	fmt.Println("difficulty: ", difficulty)
-	fmt.Println("gasLimit: ", gasLimit)
-	fmt.Println("gasUsed: ", gasUsed)
-	fmt.Println("timestamp: ", timestamp)
-	fmt.Println("txsCount: ", txsCount)
-	fmt.Println("txsTO: ", txsTO)*/
-
 }
