@@ -1535,7 +1535,6 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 	defer bc.chainmu.Unlock()
 
 	//sabri block kapatıldığında burası çalışıyor
-
 	if len(chain) > 0 {
 		lastBlock := chain[len(chain)-1]
 		fmt.Println("LevelDB'ye Yazılan Son Blok : ", lastBlock.NumberU64())
@@ -1553,6 +1552,7 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 
 		// Eksik blokları kontrol et ve işle
 		for i := 1; i < len(lastTenBlocks); i++ {
+			fmt.Println(lastTenBlocks)
 			if lastTenBlocks[i] != lastTenBlocks[i-1]+1 {
 				missingBlockNumber := lastTenBlocks[i-1] + 1
 
