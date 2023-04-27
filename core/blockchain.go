@@ -1537,6 +1537,7 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 	//sabri block kapatıldığında burası çalışıyor
 
 	if len(chain) > 0 {
+
 		lastBlock := chain[len(chain)-1]
 		fmt.Println("LevelDB'ye Yazılan Son Blok : ", lastBlock.NumberU64())
 
