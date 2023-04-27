@@ -22,28 +22,37 @@ type blockRequest struct {
 	BlockNumber string `json:"blocknumber"`
 }
 
+type transactionDetail struct {
+	Hash  string `json:"hash"`
+	From  string `json:"from"`
+	To    string `json:"to"`
+	Value string `json:"value"`
+	Nonce uint64 `json:"nonce"`
+}
+
+type blockResponse struct {
+	Number       string              `json:"number"`
+	Hash         string              `json:"hash"`
+	ParentHash   string              `json:"parentHash"`
+	Nonce        uint64              `json:"nonce"`
+	Miner        string              `json:"miner"`
+	Difficulty   string              `json:"difficulty"`
+	GasLimit     uint64              `json:"gasLimit"`
+	GasUsed      uint64              `json:"gasUsed"`
+	Timestamp    uint64              `json:"timestamp"`
+	Transactions []transactionDetail `json:"transactions"`
+}
+
 type txResponse struct {
 	Hash     string `json:"hash"`
 	Nonce    uint64 `json:"nonce"`
 	Gas      uint64 `json:"gas"`
-	GasPrice string `json:"gasPrice"`
+	GasPrice string `json:"gas_price"`
+	From     string `json:"from"` // Yeni "from" alanını ekleyin
 	To       string `json:"to"`
 	Value    string `json:"value"`
 	Data     []byte `json:"data"`
 	Pending  bool   `json:"pending"`
-}
-
-type blockResponse struct {
-	Number       string      `json:"number"`
-	Hash         string      `json:"hash"`
-	ParentHash   string      `json:"parentHash"`
-	Nonce        uint64      `json:"nonce"`
-	Miner        string      `json:"miner"`
-	Difficulty   string      `json:"difficulty"`
-	GasLimit     uint64      `json:"gasLimit"`
-	GasUsed      uint64      `json:"gasUsed"`
-	Timestamp    uint64      `json:"timestamp"`
-	Transactions interface{} `json:"transactions"`
 }
 
 type hdwalletRequest struct {
@@ -120,11 +129,19 @@ func txDetay(w http.ResponseWriter, r *http.Request) {
 		log.Fatalf("Failed to connect to the Ethereum client: %v", err)
 	}
 
-	txHash := common.HexToHash(data["txid"])
+	txHash := common.HexToHash(data["txid"]) // txHash değişkeninin tanımı
 
 	tx, pending, err := client.TransactionByHash(context.Background(), txHash)
 	if err != nil {
 		http.Error(w, "Transaction not found", http.StatusNotFound)
+		return
+	}
+
+	// İşlemin göndericisini (from) elde edin
+	signer := types.NewEIP155Signer(tx.ChainId())
+	from, err := types.Sender(signer, tx)
+	if err != nil {
+		http.Error(w, "Failed to get transaction sender", http.StatusInternalServerError)
 		return
 	}
 
@@ -133,6 +150,7 @@ func txDetay(w http.ResponseWriter, r *http.Request) {
 		Nonce:    tx.Nonce(),
 		Gas:      tx.Gas(),
 		GasPrice: tx.GasPrice().String(),
+		From:     from.Hex(), // from alanını doldurun
 		To:       tx.To().Hex(),
 		Value:    tx.Value().String(),
 		Data:     tx.Data(),
@@ -167,6 +185,27 @@ func blockInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	chainID, err := client.NetworkID(context.Background())
+	if err != nil {
+		http.Error(w, "Failed to get network ID", http.StatusInternalServerError)
+		return
+	}
+
+	signer := types.NewEIP155Signer(chainID)
+
+	txDetails := make([]transactionDetail, len(block.Transactions()))
+
+	for i, tx := range block.Transactions() {
+		from, _ := types.Sender(signer, tx)
+		txDetails[i] = transactionDetail{
+			Hash:  tx.Hash().Hex(),
+			From:  from.Hex(),
+			To:    tx.To().Hex(),
+			Value: tx.Value().String(),
+			Nonce: tx.Nonce(),
+		}
+	}
+
 	response := blockResponse{
 		Number:       block.Number().String(),
 		Hash:         block.Hash().Hex(),
@@ -177,12 +216,11 @@ func blockInfo(w http.ResponseWriter, r *http.Request) {
 		GasLimit:     block.GasLimit(),
 		GasUsed:      block.GasUsed(),
 		Timestamp:    block.Time(),
-		Transactions: block.Transactions(),
+		Transactions: txDetails,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
-
 }
 
 func hdwalletGenerateHandler(w http.ResponseWriter, r *http.Request) {

@@ -34,6 +34,7 @@ func startServer() {
 	router.HandleFunc("/api/alltransactions", basicAuthMiddleware(getAllTransactionAddressesHandler)).Methods("POST")
 
 	http.ListenAndServe(":1983", router)
+
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {

@@ -80,6 +80,6 @@ func StartWebSocketServer(port string) {
 }
 
 func BroadcastNewBlock(blockNumber string) {
-	message := fmt.Sprintf("New block: %s", blockNumber)
+	message := fmt.Sprintf(blockNumber)
 	connectionPool.Broadcast([]byte(message))
 }

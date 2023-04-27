@@ -18,9 +18,11 @@
 package core
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/core/stf"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"io"
 	"math/big"
 	"runtime"
@@ -1496,10 +1498,15 @@ func (bc *BlockChain) addFutureBlock(block *types.Block) error {
 // chain or, otherwise, create a fork. If an error is returned it will return
 // the index number of the failing block as well an error describing what went
 // wrong. After insertion is done, all accumulated events will be fired.
+
+// sabri dizi değişkenleri
+var lastTenBlocks []uint64
+var processedBlocks []uint64
+
+// --------------------------------------------------------------------------------
 func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 
-	// Sanity check that we have something meaningful to import	go stf.StartWebSocketServer()
-
+	// Sanity check that we have something meaningful to import
 	if len(chain) == 0 {
 		return 0, nil
 	}
@@ -1526,18 +1533,64 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 		return 0, errChainStopped
 	}
 	defer bc.chainmu.Unlock()
+
 	//sabri block kapatıldığında burası çalışıyor
 
 	if len(chain) > 0 {
 		lastBlock := chain[len(chain)-1]
 		fmt.Println("LevelDB'ye Yazılan Son Blok : ", lastBlock.NumberU64())
 
-		go stf.ListenNewBlocks(lastBlock)
+		// Son 10 blok numarasını güncelle
+		if len(lastTenBlocks) >= 100 {
+			lastTenBlocks = lastTenBlocks[1:]
+		}
+		lastTenBlocks = append(lastTenBlocks, lastBlock.NumberU64())
 
+		client, err := ethclient.Dial("/home/metatime/Masaüstü/node1/geth.ipc")
+		if err != nil {
+			// Handle error
+		}
+
+		// Eksik blokları kontrol et ve işle
+		for i := 1; i < len(lastTenBlocks); i++ {
+			if lastTenBlocks[i] != lastTenBlocks[i-1]+1 {
+				missingBlockNumber := lastTenBlocks[i-1] + 1
+
+				// Daha önce işlenmiş blokları atla
+				if contains(processedBlocks, missingBlockNumber) {
+					continue
+				}
+
+				missingBlock, err := client.BlockByNumber(context.Background(), big.NewInt(int64(missingBlockNumber)))
+				if err != nil {
+					// Handle error
+					continue
+				}
+				stf.ListenNewBlocks(client, missingBlock)
+				processedBlocks = append(processedBlocks, missingBlockNumber)
+			}
+		}
+
+		// Normal olarak son bloku işle
+		stf.ListenNewBlocks(client, lastBlock)
+		processedBlocks = append(processedBlocks, lastBlock.NumberU64())
 	}
+
+	//sabri block kapatıldığında burası çalışıyor
+	//--------------------------------------------------------------------------------
 
 	return bc.insertChain(chain, true, true)
 
+}
+
+// sabri contains fonksiyonu daha önce eklenen blokları kontrol ediyor
+func contains(arr []uint64, num uint64) bool {
+	for _, n := range arr {
+		if n == num {
+			return true
+		}
+	}
+	return false
 }
 
 // insertChain is the internal implementation of InsertChain, which assumes that
