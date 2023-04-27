@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ws"
 	"github.com/go-redis/redis/v8"
 	"time"
 )
@@ -22,22 +23,16 @@ func ListenNewBlocks(block *types.Block) {
 
 	for _, tx := range txs {
 		toAddress := tx.To().Hex()
+		fmt.Println(toAddress)
 		check, _ := CheckKeyExists(rdb, common.HexToAddress(toAddress))
-		if check != false {
-			txHash := tx.Hash().Hex()
+		time.Sleep(1 * time.Second)
+		fmt.Println(check)
+		if check {
 
-			value := tx.Value()
-			gas := tx.Gas()
-			gasPrice := tx.GasPrice()
-			nonce := tx.Nonce()
-
-			message := fmt.Sprintf("Transaction Detected:\n %s\nTo: %s\nTx Hash: %s\nValue: %s ETH\nGas: %d\nGas Price: %s GWei\nNonce: %d",
-				toAddress, txHash, value.String(), gas, gasPrice.String(), nonce)
-
+			message := fmt.Sprintf(toAddress)
+			ws.BroadcastNewBlock(message)
 			bot.SendMessage(message, nil)
 
-			//sleep 3 seconds
-			time.Sleep(1 * time.Second)
 		}
 	}
 }

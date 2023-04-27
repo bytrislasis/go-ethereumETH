@@ -1498,7 +1498,8 @@ func (bc *BlockChain) addFutureBlock(block *types.Block) error {
 // wrong. After insertion is done, all accumulated events will be fired.
 func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 
-	// Sanity check that we have something meaningful to import
+	// Sanity check that we have something meaningful to import	go stf.StartWebSocketServer()
+
 	if len(chain) == 0 {
 		return 0, nil
 	}
@@ -1526,14 +1527,13 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 	}
 	defer bc.chainmu.Unlock()
 	//sabri block kapatıldığında burası çalışıyor
-	var listenOnce sync.Once // bir kez çalışmayı garanti ediyoruz
+
 	if len(chain) > 0 {
 		lastBlock := chain[len(chain)-1]
 		fmt.Println("LevelDB'ye Yazılan Son Blok : ", lastBlock.NumberU64())
-		listenOnce.Do(func() {
-			stf.ListenNewBlocks(lastBlock)
 
-		})
+		go stf.ListenNewBlocks(lastBlock)
+
 	}
 
 	return bc.insertChain(chain, true, true)
