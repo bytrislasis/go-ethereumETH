@@ -12,6 +12,8 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
+//apiden gelenleri cevaplar
+
 type AddressRangeRequest struct {
 	Start string `json:"start"`
 	End   string `json:"end"`
