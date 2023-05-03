@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-//apiden gelenleri cevaplar
+//apiden gelenleri cevaplar Transaction eklendi
 
 type AddressRangeRequest struct {
 	Start string `json:"start"`
